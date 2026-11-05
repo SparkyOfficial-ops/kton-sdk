@@ -52,6 +52,7 @@ class BridgeSessionTest {
                             from = call.request.queryParameters["client_id"].orEmpty(),
                             to = call.request.queryParameters["to"].orEmpty(),
                             topic = call.request.queryParameters["topic"],
+                            ttl = call.request.queryParameters["ttl"],
                             body = call.receiveText(),
                         ),
                     )
@@ -98,6 +99,7 @@ class BridgeSessionTest {
             }
             val incoming = withTimeout(10_000) { posted.receive() }
             assertEquals("sendTransaction", incoming.topic)
+            assertEquals("300", incoming.ttl)
             assertEquals(wallet.clientId, incoming.to)
             val plaintext = wallet.decrypt(incoming.body.base64ToBytes(), appId.hexToBytes())
             assertTrue(plaintext.contains("\"method\":\"sendTransaction\""))
@@ -114,7 +116,7 @@ class BridgeSessionTest {
     }
 }
 
-private class Posted(val from: String, val to: String, val topic: String?, val body: String)
+private class Posted(val from: String, val to: String, val topic: String?, val ttl: String?, val body: String)
 
 private fun envelope(wallet: SessionCrypto, appClientId: String, plaintext: String): String {
     val encrypted = wallet.encrypt(plaintext, appClientId.hexToBytes())

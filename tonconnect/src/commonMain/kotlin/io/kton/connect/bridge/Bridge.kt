@@ -84,7 +84,7 @@ internal class BridgeClient(private val http: HttpClient) {
                     if (!traceId.isNullOrBlank()) parameter("trace_id", traceId)
                     if (!cursor.isNullOrBlank()) {
                         parameter("last_event_id", cursor)
-                        header(HttpHeaders.LastEventID, cursor)
+                        header("Last-Event-ID", cursor)
                     }
                 }.execute { response ->
                     if (!response.status.isSuccess()) {

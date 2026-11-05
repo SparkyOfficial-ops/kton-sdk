@@ -1,9 +1,13 @@
 package io.kton.connect
 
 import io.kton.connect.bridge.SseParser
+import io.kton.connect.crypto.base64UrlToBytes
 import io.kton.connect.protocol.ConnectItem
 import io.kton.connect.protocol.ConnectOptions
 import io.kton.connect.protocol.ConnectRequest
+import io.kton.connect.protocol.EmbeddedAction
+import io.kton.connect.protocol.OutgoingMessage
+import io.kton.connect.protocol.Transaction
 import io.kton.connect.protocol.ProtocolJson
 import io.kton.connect.protocol.ReturnStrategy
 import io.kton.connect.protocol.TonProof
@@ -43,6 +47,26 @@ class ProtocolTest {
         assertEquals("tonkeeper-tc://?$query", link.deepLink)
         assertEquals("tc://?$query", link.unifiedUrl)
         assertTrue(appendQuery("https://wallet.example/tc?x=1", "v=2").contains("&v=2"))
+    }
+
+    @Test
+    fun embeddedRequestIsBase64UrlJson() {
+        val transaction = Transaction(
+            messages = listOf(OutgoingMessage(address = "EQ", amount = "1000")),
+            network = "-239",
+            validUntil = 10,
+        )
+        val encoded = io.kton.connect.protocol.embeddedParameter(EmbeddedAction.SendTransaction(transaction))
+        val json = encoded.base64UrlToBytes().decodeToString()
+        assertEquals("""{"m":"st","n":"-239","vu":10,"ms":[{"a":"EQ","am":"1000"}]}""", json)
+        val query = connectQuery(
+            "aa",
+            ConnectRequest("https://example.com/tonconnect-manifest.json", listOf(ConnectItem.TonAddress())),
+            ConnectOptions(traceId = "trace-1", embedded = EmbeddedAction.SignMessage(transaction)),
+        )
+        assertTrue(query.contains("trace_id=trace-1"))
+        assertTrue(query.contains("e="))
+        assertTrue(query.contains("tc://").not())
     }
 
     @Test
