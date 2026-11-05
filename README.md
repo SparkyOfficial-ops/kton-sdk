@@ -3,7 +3,7 @@
 Нативный клиент [TonConnect 2](https://github.com/ton-blockchain/ton-connect) без WebView.
 Приложение говорит с кошельком напрямую: ключи X25519, `crypto_box` как в официальном JS SDK, мост по HTTP SSE и universal link.
 
-Весь протокол лежит в `commonMain`. Сейчас включён таргет `jvm`: байткод Java 11 и OkHttp, так что тот же код идёт и на десктоп, и на Android. Обычный Android-модуль увидит библиотеку как KMP-зависимость после добавления `androidTarget()` в `tonconnect/build.gradle.kts` (нужен Android SDK). Исходники при этом переносить не нужно. Колбэки приходят не на UI-потоке: перед обновлением экрана переключитесь на `Dispatchers.Main`.
+Весь протокол лежит в `commonMain`. Таргеты `jvm` и `android` делят OkHttp, ZXing и байткод Java 11 (`src/jvmAndAndroidMain`). Android-модуль подключает проект как KMP-зависимость. Путь к SDK — `sdk.dir` в `local.properties`. Колбэки приходят не на UI-потоке: перед обновлением экрана переключитесь на `Dispatchers.Main` (на Android он приходит вместе с библиотекой).
 
 ## Подключение
 
@@ -25,9 +25,9 @@ val tonConnect = TonConnect(
 )
 
 val link = tonConnect.connect(wallet)
-// Кнопка на телефоне открывает link.universalUrl.
-// QR на десктопе кодирует link.qrPayload (это тот же universal link).
-// link.unifiedUrl — схема tc://, один QR на все кошельки.
+// Кнопка на телефоне: context.openWallet(link) открывает link.universalUrl.
+// QR: link.qrCode().toSvg() на десктопе, link.qrCode().toBitmap() на Android.
+// link.qrPayload — та же строка, что universal link. link.unifiedUrl — схема tc://.
 
 tonConnect.onWalletConnected { wallet ->
     println(wallet.address)
@@ -74,5 +74,7 @@ TonConnect(
 ## Сборка
 
 ```
-gradlew.bat :tonconnect:jvmTest
+gradlew.bat :tonconnect:jvmTest :tonconnect:testDebugUnitTest
 ```
+
+`jvmTest` гоняет протокол и локальный мост. `testDebugUnitTest` собирает Android-таргет и прогоняет общие тесты на JVM Android SDK. Нужны JDK 21 и Android SDK с платформой 36.

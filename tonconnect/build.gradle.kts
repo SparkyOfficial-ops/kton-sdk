@@ -1,6 +1,21 @@
 plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
+    id("com.android.library")
+}
+
+android {
+    namespace = "io.kton.connect"
+    compileSdk = 36
+    buildToolsVersion = "36.1.0"
+    defaultConfig {
+        minSdk = 21
+        consumerProguardFiles("consumer-rules.pro")
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
 }
 
 kotlin {
@@ -10,6 +25,16 @@ kotlin {
             freeCompilerArgs.add("-Xexpect-actual-classes")
         }
     }
+    androidTarget {
+        compilations.all {
+            compileTaskProvider.configure {
+                compilerOptions {
+                    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+                    freeCompilerArgs.add("-Xexpect-actual-classes")
+                }
+            }
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {
@@ -17,9 +42,27 @@ kotlin {
             api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
             api("io.ktor:ktor-client-core:3.1.1")
         }
-        jvmMain.dependencies {
-            implementation("io.ktor:ktor-client-okhttp:3.1.1")
-            implementation("com.google.zxing:core:3.5.3")
+        val jvmAndAndroidMain by creating {
+            dependsOn(commonMain.get())
+            dependencies {
+                implementation("io.ktor:ktor-client-okhttp:3.1.1")
+                implementation("com.google.zxing:core:3.5.3")
+            }
+        }
+        jvmMain {
+            dependsOn(jvmAndAndroidMain)
+        }
+        androidMain {
+            dependsOn(jvmAndAndroidMain)
+            dependencies {
+                api("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
+            }
+        }
+        jvmTest {
+            dependsOn(commonTest.get())
+        }
+        androidUnitTest {
+            dependsOn(commonTest.get())
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
