@@ -2,6 +2,7 @@ plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
     id("com.android.library")
+    id("maven-publish")
 }
 
 android {
@@ -9,7 +10,7 @@ android {
     compileSdk = 36
     buildToolsVersion = "36.1.0"
     defaultConfig {
-        minSdk = 21
+        minSdk = 23
         consumerProguardFiles("consumer-rules.pro")
     }
     compileOptions {
@@ -26,6 +27,7 @@ kotlin {
         }
     }
     androidTarget {
+        publishLibraryVariants("release")
         compilations.all {
             compileTaskProvider.configure {
                 compilerOptions {
@@ -51,11 +53,15 @@ kotlin {
         }
         jvmMain {
             dependsOn(jvmAndAndroidMain)
+            dependencies {
+                implementation("net.java.dev.jna:jna:5.15.0")
+            }
         }
         androidMain {
             dependsOn(jvmAndAndroidMain)
             dependencies {
                 api("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
+                implementation("androidx.security:security-crypto:1.1.0-alpha06")
             }
         }
         jvmTest {

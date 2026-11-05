@@ -7,12 +7,11 @@ import io.kton.connect.crypto.sha256
 import io.kton.connect.platform.currentTimeMillis
 
 /**
- * Checks a `ton_proof` login signature.
+ * Checks a `ton_proof` login signature against [publicKeyHex].
  *
- * The signature is verified against [publicKeyHex] from the connect reply.
- * A backend that needs to be sure that key belongs to [address] still has to
- * read it from `walletStateInit` (or call `get_public_key` on the account).
- * This client does not parse TON cells.
+ * Call [verifyWalletIdentity] as well: it checks that this key and [address]
+ * are the ones committed in `walletStateInit`. [TonConnect] does both when a
+ * wallet connects.
  */
 fun verifyTonProof(
     address: String,

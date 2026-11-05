@@ -11,7 +11,18 @@ import io.kton.connect.protocol.Transaction
 import io.kton.connect.protocol.ProtocolJson
 import io.kton.connect.protocol.ReturnStrategy
 import io.kton.connect.protocol.TonProof
+import io.kton.connect.crypto.hexToBytes
+import io.kton.connect.crypto.toBase64
+import io.kton.connect.crypto.toHex
+import io.kton.connect.protocol.BitBuilder
+import io.kton.connect.protocol.WalletVersion
 import io.kton.connect.protocol.WalletApp
+import io.kton.connect.protocol.buildWallet
+import io.kton.connect.protocol.crc32c
+import io.kton.connect.protocol.parseBoc
+import io.kton.connect.protocol.parseWalletStateInit
+import io.kton.connect.protocol.toBoc
+import io.kton.connect.protocol.verifyWalletIdentity
 import io.kton.connect.protocol.appendQuery
 import io.kton.connect.protocol.buildConnectLink
 import io.kton.connect.protocol.connectQuery
@@ -108,6 +119,55 @@ class ProtocolTest {
     }
 
     @Test
+    fun crc32cMatchesTheCastagnoliCheckValue() {
+        assertEquals(0xE3069283.toInt(), crc32c("123456789".encodeToByteArray()))
+    }
+
+    @Test
+    fun walletStateInitBindsKeyAndAddress() {
+        val key = ByteArray(32) { 0x7A }
+        val built = buildWallet(WalletVersion.V5R1, key, walletId = 0x7FFFFF11)
+        val contract = parseWalletStateInit(built.stateInitBase64)
+        assertEquals(WalletVersion.V5R1, contract.version)
+        assertEquals(built.publicKeyHex, contract.publicKey.toHex())
+        assertTrue(verifyWalletIdentity(built.address, built.publicKeyHex, built.stateInitBase64))
+        assertTrue(!verifyWalletIdentity(built.address, "00".repeat(32), built.stateInitBase64))
+        assertTrue(!verifyWalletIdentity("0:" + "ab".repeat(32), built.publicKeyHex, built.stateInitBase64))
+    }
+
+    @Test
+    fun mainnetV3R2StateMatchesTheAccount() {
+        val code = parseBoc(MAINNET_V3R2_CODE.hexToBytes()).single()
+        val withChecksum = parseBoc(
+            "B5EE9C724101010100710000DEFF0020DD2082014C97BA218201339CBAB19F71B0ED44D0D31FD31F31D70BFFE304E0A4F2608308D71820D31FD31FD31FF82313BBF263ED44D0D31FD31FD3FFD15132BAF2A15144BAF2A204F901541055F910F2A3F8009320D74A96D307D402FB00E8D101A4C8CB1FCB1FCBFFC9ED5410BD6DAD".hexToBytes(),
+        ).single()
+        assertTrue(code.hash.contentEquals(withChecksum.hash))
+        val data = parseBoc(MAINNET_V3R2_DATA.hexToBytes()).single()
+        val walletId = uint(data.bits, 32, 32)
+        val publicKey = io.kton.connect.protocol.Slice(data).apply { skip(64) }.loadBytes(32)
+        assertEquals(0x29a9a317, walletId)
+        assertEquals("72c9ed6b62a6e2eba14a93b90462e7a367777beb8a38fb15b9f33844d22ce2ff", publicKey.toHex())
+        val initialData = BitBuilder().apply {
+            writeUint(0, 32)
+            writeUint(walletId, 32)
+            writeBytes(publicKey)
+        }.toCell()
+        val root = BitBuilder().apply {
+            writeBit(false)
+            writeBit(false)
+            writeBit(true)
+            writeBit(true)
+            writeBit(false)
+        }.toCell(listOf(code, initialData))
+        val hash = "83dfd552e63729b472fcbcc8c45ebcc6691702558b68ec7527e1ba403a0f31a8"
+        assertEquals(hash, root.hash.toHex())
+        val contract = parseWalletStateInit(root.toBoc().toBase64())
+        assertEquals(WalletVersion.V3R2, contract.version)
+        assertEquals(publicKey.toHex(), contract.publicKey.toHex())
+        assertTrue(verifyWalletIdentity("0:$hash", contract.publicKey.toHex(), root.toBoc().toBase64()))
+    }
+
+    @Test
     fun walletListDecodesSseAndJsBridges() {
         val json = """
             [{
@@ -141,3 +201,17 @@ class ProtocolTest {
         assertEquals("""{"from":"aa","message":"bb"}""", second.single().data)
     }
 }
+
+private fun uint(bits: BooleanArray, offset: Int, width: Int): Long {
+    var value = 0L
+    repeat(width) { index ->
+        value = (value shl 1) or if (bits[offset + index]) 1L else 0L
+    }
+    return value
+}
+
+private const val MAINNET_V3R2_CODE =
+    "b5ee9c720101010100710000deff0020dd2082014c97ba218201339cbab19f71b0ed44d0d31fd31f31d70bffe304e0a4f2608308d71820d31fd31fd31ff82313bbf263ed44d0d31fd31fd3ffd15132baf2a15144baf2a204f901541055f910f2a3f8009320d74a96d307d402fb00e8d101a4c8cb1fcb1fcbffc9ed54"
+
+private const val MAINNET_V3R2_DATA =
+    "b5ee9c7201010101002a0000500000015729a9a31772c9ed6b62a6e2eba14a93b90462e7a367777beb8a38fb15b9f33844d22ce2ff"

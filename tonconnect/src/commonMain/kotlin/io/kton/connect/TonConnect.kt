@@ -21,11 +21,15 @@ import io.kton.connect.protocol.SignDataPayload
 import io.kton.connect.protocol.SignDataResult
 import io.kton.connect.protocol.TonConnectError
 import io.kton.connect.protocol.Transaction
+import io.kton.connect.protocol.ConnectItem
 import io.kton.connect.protocol.WalletApp
 import io.kton.connect.protocol.WalletFeature
 import io.kton.connect.protocol.WalletMessage
 import io.kton.connect.protocol.buildConnectLink
 import io.kton.connect.protocol.parseWalletMessage
+import io.kton.connect.protocol.parseWalletStateInit
+import io.kton.connect.protocol.verifyTonProof
+import io.kton.connect.protocol.verifyWalletIdentity
 import io.kton.connect.storage.MemorySessionStorage
 import io.kton.connect.storage.SessionStorage
 import io.kton.connect.storage.StoredSession
@@ -71,6 +75,7 @@ data class ConnectedWallet(
     val platform: String,
     val appVersion: String,
     val features: List<WalletFeature>,
+    val walletVersion: String = "",
 )
 
 data class SignedTransaction(val bocBase64: String, val requestId: String)
@@ -108,12 +113,20 @@ class WalletException(val code: Int, message: String) : TonConnectException(mess
  * [sendTransaction] suspends until the wallet signs and also emits
  * [TonConnectEvent.TransactionSigned], so callbacks and coroutines both work.
  */
+fun interface WalletIdentity {
+    fun matches(address: String, publicKeyHex: String, walletStateInit: String): Boolean
+}
+
 class TonConnect(
     val manifestUrl: String,
     private val storage: SessionStorage = MemorySessionStorage(),
     httpClient: HttpClient? = null,
     private val logger: TonConnectLogger? = null,
     private val walletsListUrl: String = DEFAULT_WALLETS_URL,
+    private val appDomain: String? = null,
+    private val walletIdentity: WalletIdentity = WalletIdentity { address, key, stateInit ->
+        verifyWalletIdentity(address, key, stateInit)
+    },
 ) {
     private val ownsClient = httpClient == null
     private val http = httpClient ?: createPlatformHttpClient()
@@ -137,6 +150,9 @@ class TonConnect(
     val status: StateFlow<ConnectionStatus> = _status.asStateFlow()
 
     init {
+        if (storage is MemorySessionStorage) {
+            logger?.log("Session secret stays in process memory and disappears when the process exits")
+        }
         scope.launch {
             runCatching { restore() }.onFailure { logger?.log("session restore failed: ${it.message}") }
         }
@@ -153,6 +169,10 @@ class TonConnect(
         if (wallet.universalUrl.isNullOrBlank()) {
             throw TonConnectException("${wallet.name} does not publish a universal link")
         }
+        val proofPayload = options.items.filterIsInstance<ConnectItem.TonProof>().firstOrNull()?.payload
+        if (proofPayload != null && appDomain.isNullOrBlank()) {
+            throw TonConnectException("ton_proof needs appDomain so the signed domain can be checked")
+        }
         val crypto = SessionCrypto.generate()
         val traceId = options.traceId?.takeIf { it.isNotBlank() } ?: randomTraceId()
         val session = LiveSession(
@@ -160,6 +180,7 @@ class TonConnect(
             bridgeUrl = bridgeUrl,
             appName = wallet.appName,
             traceId = traceId,
+            expectedProofPayload = proofPayload,
         )
         val wait = CompletableDeferred<ConnectedWallet>()
         lifecycle.withLock {
@@ -304,6 +325,7 @@ class TonConnect(
             platform = stored.platform,
             appVersion = stored.appVersion,
             features = features,
+            walletVersion = stored.walletVersion,
         )
         val session = LiveSession(
             crypto = crypto,
@@ -389,7 +411,40 @@ class TonConnect(
 
     private suspend fun onConnected(session: LiveSession, walletClientId: String, message: WalletMessage.Connected) {
         if (!session.acceptEvent(message.id)) return
+        if (!walletIdentity.matches(message.address, message.publicKeyHex, message.walletStateInit)) {
+            onConnectFailed(
+                WalletMessage.ConnectFailed(
+                    id = message.id,
+                    code = TonConnectError.BAD_REQUEST,
+                    message = "Wallet state init does not match the address and public key",
+                ),
+            )
+            return
+        }
+        val expectedProof = session.expectedProofPayload
+        if (expectedProof != null) {
+            val proof = message.proof
+            val domain = appDomain
+            val signed = proof != null && domain != null && verifyTonProof(
+                address = message.address,
+                publicKeyHex = message.publicKeyHex,
+                proof = proof,
+                expectedDomain = domain,
+                expectedPayload = expectedProof,
+            )
+            if (!signed) {
+                onConnectFailed(
+                    WalletMessage.ConnectFailed(
+                        id = message.id,
+                        code = TonConnectError.BAD_REQUEST,
+                        message = "ton_proof was rejected",
+                    ),
+                )
+                return
+            }
+        }
         session.walletClientId = walletClientId
+        val version = runCatching { parseWalletStateInit(message.walletStateInit).version.wire }.getOrDefault("")
         val connected = ConnectedWallet(
             appName = message.device.appName.ifBlank { session.appName },
             address = message.address,
@@ -399,6 +454,7 @@ class TonConnect(
             platform = message.device.platform,
             appVersion = message.device.appVersion,
             features = message.device.features,
+            walletVersion = version,
         )
         session.connected = connected
         _wallet.value = connected
@@ -532,6 +588,7 @@ class TonConnect(
                 bridgeLastEventId = session.bridgeLastEventId,
                 featuresJson = ProtocolJson.encodeToString(ListSerializer(WalletFeature.serializer()), connected.features),
                 traceId = session.traceId,
+                walletVersion = connected.walletVersion,
             ),
         )
     }
@@ -569,6 +626,7 @@ class TonConnect(
         var lastWalletEventId: Long? = null,
         var bridgeLastEventId: String? = null,
         var traceId: String? = null,
+        var expectedProofPayload: String? = null,
     ) {
         fun acceptEvent(id: Long): Boolean {
             val previous = lastWalletEventId

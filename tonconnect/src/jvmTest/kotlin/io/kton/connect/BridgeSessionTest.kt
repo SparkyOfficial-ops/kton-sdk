@@ -7,6 +7,8 @@ import io.kton.connect.crypto.toBase64
 import io.kton.connect.protocol.OutgoingMessage
 import io.kton.connect.protocol.TonNetwork
 import io.kton.connect.protocol.WalletApp
+import io.kton.connect.protocol.WalletVersion
+import io.kton.connect.protocol.buildWallet
 import io.kton.connect.protocol.BridgeEndpoint
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.install
@@ -80,12 +82,14 @@ class BridgeSessionTest {
                 sessions.keys.single()
             }
             val wallet = SessionCrypto.generate()
+            val account = buildWallet(WalletVersion.V4R2, ByteArray(32) { 0x11 })
             val connectEvent = """
-                {"event":"connect","id":1,"payload":{"items":[{"name":"ton_addr","address":"0:abcd","network":"-239","publicKey":"aa","walletStateInit":"te6"}],"device":{"platform":"android","appName":"tonkeeper","appVersion":"4.0","maxProtocolVersion":2,"features":[{"name":"SendTransaction","maxMessages":4}]}}}
+                {"event":"connect","id":1,"payload":{"items":[{"name":"ton_addr","address":"${account.address}","network":"-239","publicKey":"${account.publicKeyHex}","walletStateInit":"${account.stateInitBase64}"}],"device":{"platform":"android","appName":"tonkeeper","appVersion":"4.0","maxProtocolVersion":2,"features":[{"name":"SendTransaction","maxMessages":4}]}}}
             """.trimIndent()
             sessions.getValue(appId).send(envelope(wallet, appId, connectEvent))
             val connected = withTimeout(10_000) { ton.awaitConnect() }
-            assertEquals("0:abcd", connected.address)
+            assertEquals(account.address, connected.address)
+            assertEquals("v4r2", connected.walletVersion)
             assertEquals(TonNetwork.MAINNET, connected.network)
 
             val signed = CompletableDeferred<String>()
