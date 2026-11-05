@@ -1,5 +1,12 @@
 package io.kton.connect.protocol
 
+import io.kton.connect.crypto.toBase64UrlNoPadding
+import io.kton.connect.qr.QrCode
+import io.kton.connect.qr.encodeQr
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 const val TON_CONNECT_VERSION = 2
 
@@ -15,10 +22,18 @@ sealed class ReturnStrategy {
     }
 }
 
+sealed class EmbeddedAction {
+    abstract val transaction: Transaction
+
+    data class SendTransaction(override val transaction: Transaction) : EmbeddedAction()
+    data class SignMessage(override val transaction: Transaction) : EmbeddedAction()
+}
+
 data class ConnectOptions(
     val items: List<ConnectItem> = listOf(ConnectItem.TonAddress()),
     val returnStrategy: ReturnStrategy = ReturnStrategy.Back,
     val traceId: String? = null,
+    val embedded: EmbeddedAction? = null,
 )
 
 /**
@@ -32,6 +47,8 @@ data class ConnectLink(
     val unifiedUrl: String,
 ) {
     val qrPayload: String get() = universalUrl
+
+    fun qrCode(): QrCode = encodeQr(qrPayload)
 }
 
 internal fun buildConnectLink(
@@ -61,7 +78,76 @@ internal fun connectQuery(clientId: String, request: ConnectRequest, options: Co
     if (!options.traceId.isNullOrBlank()) {
         parts += "trace_id=${encodeURIComponent(options.traceId)}"
     }
+    options.embedded?.let { action ->
+        parts += "e=${encodeURIComponent(embeddedParameter(action))}"
+    }
     return parts.joinToString("&")
+}
+
+internal fun embeddedParameter(action: EmbeddedAction): String {
+    val method = when (action) {
+        is EmbeddedAction.SendTransaction -> "st"
+        is EmbeddedAction.SignMessage -> "sm"
+    }
+    val transaction = action.transaction
+    val hasMessages = !transaction.messages.isNullOrEmpty()
+    val hasItems = !transaction.items.isNullOrEmpty()
+    require(hasMessages != hasItems) { "Embedded request needs messages or items, and not both" }
+    val json = buildJsonObject {
+        put("m", method)
+        transaction.from?.let { put("f", it) }
+        transaction.network?.let { put("n", it) }
+        transaction.validUntil?.let { put("vu", it) }
+        transaction.messages?.let { put("ms", JsonArray(it.map { message -> wireMessage(message) })) }
+        transaction.items?.let { put("i", JsonArray(it.map { item -> wireItem(item) })) }
+    }
+    return ProtocolJson.encodeToString(JsonObject.serializer(), json).encodeToByteArray().toBase64UrlNoPadding()
+}
+
+private fun wireMessage(message: OutgoingMessage): JsonObject = buildJsonObject {
+    put("a", message.address)
+    put("am", message.amount)
+    message.payload?.let { put("p", it) }
+    message.stateInit?.let { put("si", it) }
+    message.extraCurrency?.let { amounts ->
+        put("ec", buildJsonObject { amounts.forEach { (id, amount) -> put(id, amount) } })
+    }
+}
+
+private fun wireItem(item: TransactionItem): JsonObject = when (item) {
+    is TransactionItem.Ton -> buildJsonObject {
+        put("t", "ton")
+        put("a", item.address)
+        put("am", item.amount)
+        item.payload?.let { put("p", it) }
+        item.stateInit?.let { put("si", it) }
+        item.extraCurrency?.let { amounts ->
+            put("ec", buildJsonObject { amounts.forEach { (id, amount) -> put(id, amount) } })
+        }
+    }
+    is TransactionItem.Jetton -> buildJsonObject {
+        put("t", "jetton")
+        put("ma", item.master)
+        put("d", item.destination)
+        put("am", item.amount)
+        item.attachAmount?.let { put("aa", it) }
+        item.queryId?.let { put("qi", it) }
+        item.responseDestination?.let { put("rd", it) }
+        item.customPayload?.let { put("cp", it) }
+        item.forwardAmount?.let { put("fa", it) }
+        item.forwardPayload?.let { put("fp", it) }
+    }
+    is TransactionItem.Nft -> buildJsonObject {
+        put("t", "nft")
+        put("na", item.nftAddress)
+        put("no", item.newOwner)
+        item.attachAmount?.let { put("aa", it) }
+        item.queryId?.let { put("qi", it) }
+        item.responseDestination?.let { put("rd", it) }
+        item.customPayload?.let { put("cp", it) }
+        item.forwardAmount?.let { put("fa", it) }
+        item.forwardPayload?.let { put("fp", it) }
+    }
 }
 
 internal fun appendQuery(base: String, query: String): String {

@@ -28,6 +28,7 @@ data class StoredSession(
     val lastWalletEventId: Long? = null,
     val bridgeLastEventId: String? = null,
     val featuresJson: String = "[]",
+    val traceId: String? = null,
 )
 
 class MemorySessionStorage : SessionStorage {

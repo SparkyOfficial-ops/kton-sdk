@@ -36,7 +36,7 @@ internal data class BridgeEnvelope(
 
 internal data class BridgeDelivery(val eventId: String?, val envelope: BridgeEnvelope)
 
-internal class BridgeException(message: String) : RuntimeException(message)
+internal class BridgeException(message: String, val status: Int? = null) : RuntimeException(message)
 
 internal class BridgeClient(private val http: HttpClient) {
     suspend fun send(
@@ -58,11 +58,20 @@ internal class BridgeClient(private val http: HttpClient) {
             setBody(bodyBase64)
         }
         if (!response.status.isSuccess()) {
-            throw BridgeException("Bridge rejected message with HTTP ${response.status.value}")
+            val details = runCatching { response.bodyAsText() }.getOrDefault("").trim()
+            throw BridgeException(
+                "Bridge rejected message with HTTP ${response.status.value}${if (details.isEmpty()) "" else ": $details"}",
+                response.status.value,
+            )
         }
     }
 
-    fun listen(bridgeUrl: String, clientId: String, lastEventId: String? = null): Flow<BridgeDelivery> = flow {
+    fun listen(
+        bridgeUrl: String,
+        clientId: String,
+        lastEventId: String? = null,
+        traceId: String? = null,
+    ): Flow<BridgeDelivery> = flow {
         var cursor = lastEventId
         var attempt = 0
         while (currentCoroutineContext().isActive) {
@@ -72,10 +81,17 @@ internal class BridgeClient(private val http: HttpClient) {
                     header(HttpHeaders.CacheControl, "no-cache")
                     parameter("client_id", clientId)
                     parameter("heartbeat", "message")
-                    if (!cursor.isNullOrBlank()) parameter("last_event_id", cursor)
+                    if (!traceId.isNullOrBlank()) parameter("trace_id", traceId)
+                    if (!cursor.isNullOrBlank()) {
+                        parameter("last_event_id", cursor)
+                        header(HttpHeaders.LastEventID, cursor)
+                    }
                 }.execute { response ->
                     if (!response.status.isSuccess()) {
-                        throw BridgeException("Bridge SSE failed with HTTP ${response.status.value}")
+                        throw BridgeException(
+                            "Bridge SSE failed with HTTP ${response.status.value}",
+                            response.status.value,
+                        )
                     }
                     attempt = 0
                     val parser = SseParser()
@@ -93,6 +109,10 @@ internal class BridgeClient(private val http: HttpClient) {
                 delay(300)
             } catch (cancelled: CancellationException) {
                 throw cancelled
+            } catch (error: BridgeException) {
+                if (error.status != null && error.status in 400..499) throw error
+                attempt += 1
+                delay(reconnectDelay(attempt))
             } catch (_: Throwable) {
                 attempt += 1
                 delay(reconnectDelay(attempt))

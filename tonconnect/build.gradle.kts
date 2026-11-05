@@ -19,6 +19,7 @@ kotlin {
         }
         jvmMain.dependencies {
             implementation("io.ktor:ktor-client-okhttp:3.1.1")
+            implementation("com.google.zxing:core:3.5.3")
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

@@ -2,6 +2,7 @@ package io.kton.connect
 
 import io.kton.connect.bridge.BridgeClient
 import io.kton.connect.bridge.BridgeDelivery
+import io.kton.connect.bridge.BridgeException
 import io.kton.connect.crypto.SessionCrypto
 import io.kton.connect.crypto.base64ToBytes
 import io.kton.connect.crypto.hexToBytes
@@ -13,6 +14,7 @@ import io.kton.connect.platform.currentTimeMillis
 import io.kton.connect.protocol.ConnectLink
 import io.kton.connect.protocol.ConnectOptions
 import io.kton.connect.protocol.ConnectRequest
+import io.kton.connect.protocol.randomTraceId
 import io.kton.connect.protocol.OutgoingMessage
 import io.kton.connect.protocol.ProtocolJson
 import io.kton.connect.protocol.SignDataPayload
@@ -46,6 +48,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -70,10 +73,13 @@ data class ConnectedWallet(
 
 data class SignedTransaction(val bocBase64: String, val requestId: String)
 
+data class SignedMessage(val internalBoc: String, val requestId: String)
+
 sealed interface TonConnectEvent {
     data class WalletConnected(val wallet: ConnectedWallet) : TonConnectEvent
     data class ConnectFailed(val code: Int, val message: String) : TonConnectEvent
     data class TransactionSigned(val transaction: SignedTransaction) : TonConnectEvent
+    data class MessageSigned(val message: SignedMessage) : TonConnectEvent
     data class RequestFailed(val requestId: String, val code: Int, val message: String) : TonConnectEvent
     data object Disconnected : TonConnectEvent
 }
@@ -146,7 +152,13 @@ class TonConnect(
             throw TonConnectException("${wallet.name} does not publish a universal link")
         }
         val crypto = SessionCrypto.generate()
-        val session = LiveSession(crypto = crypto, bridgeUrl = bridgeUrl, appName = wallet.appName)
+        val traceId = options.traceId?.takeIf { it.isNotBlank() } ?: randomTraceId()
+        val session = LiveSession(
+            crypto = crypto,
+            bridgeUrl = bridgeUrl,
+            appName = wallet.appName,
+            traceId = traceId,
+        )
         val wait = CompletableDeferred<ConnectedWallet>()
         lifecycle.withLock {
             restoreSuperseded = true
@@ -155,7 +167,12 @@ class TonConnect(
             install(session, ConnectionStatus.Connecting, wallet = null)
         }
         logger?.log("connecting to ${wallet.appName}")
-        return buildConnectLink(wallet, crypto.clientId, ConnectRequest(manifestUrl, options.items), options)
+        return buildConnectLink(
+            wallet,
+            crypto.clientId,
+            ConnectRequest(manifestUrl, options.items),
+            options.copy(traceId = traceId),
+        )
     }
 
     suspend fun awaitConnect(timeout: Duration = 5.minutes): ConnectedWallet {
@@ -181,7 +198,7 @@ class TonConnect(
     suspend fun sendTransaction(transaction: Transaction, timeout: Duration = 5.minutes): String {
         val connected = requireWallet()
         val payload = normalize(transaction, connected)
-        validateTransaction(payload, connected)
+        validateTransaction(payload, connected, "SendTransaction")
         val response = request(
             "sendTransaction",
             listOf(ProtocolJson.encodeToString(Transaction.serializer(), payload)),
@@ -191,6 +208,21 @@ class TonConnect(
             ?: throw TonConnectException("Wallet returned an empty transaction result")
         val signed = SignedTransaction(boc, response.id)
         emit(TonConnectEvent.TransactionSigned(signed))
+        return boc
+    }
+
+    suspend fun signMessage(transaction: Transaction, timeout: Duration = 5.minutes): String {
+        val connected = requireWallet()
+        requireFeature("SignMessage")
+        val payload = normalize(transaction, connected)
+        validateTransaction(payload, connected, "SignMessage")
+        val response = request(
+            "signMessage",
+            listOf(ProtocolJson.encodeToString(Transaction.serializer(), payload)),
+            timeout,
+        )
+        val boc = internalBoc(response.result) ?: throw TonConnectException("Wallet returned an empty signMessage result")
+        emit(TonConnectEvent.MessageSigned(SignedMessage(boc, response.id)))
         return boc
     }
 
@@ -233,6 +265,20 @@ class TonConnect(
         return Subscription(job)
     }
 
+    fun onMessageSigned(handler: (SignedMessage) -> Unit): Subscription {
+        val job = scope.launch {
+            events.filterIsInstance<TonConnectEvent.MessageSigned>().collect { handler(it.message) }
+        }
+        return Subscription(job)
+    }
+
+    fun onConnectFailed(handler: (code: Int, message: String) -> Unit): Subscription {
+        val job = scope.launch {
+            events.filterIsInstance<TonConnectEvent.ConnectFailed>().collect { handler(it.code, it.message) }
+        }
+        return Subscription(job)
+    }
+
     fun close() {
         listenJob?.cancel()
         live?.crypto?.destroy()
@@ -266,6 +312,7 @@ class TonConnect(
             nextRequestId = stored.nextRequestId,
             lastWalletEventId = stored.lastWalletEventId,
             bridgeLastEventId = stored.bridgeLastEventId,
+            traceId = stored.traceId,
         )
         val published = lifecycle.withLock {
             if (restoreSuperseded || live != null) {
@@ -287,9 +334,29 @@ class TonConnect(
     }
 
     private suspend fun listen(session: LiveSession) {
-        bridge.listen(session.bridgeUrl, session.crypto.clientId, session.bridgeLastEventId).collect { delivery ->
-            if (live !== session) return@collect
-            handle(session, delivery)
+        try {
+            bridge.listen(
+                session.bridgeUrl,
+                session.crypto.clientId,
+                session.bridgeLastEventId,
+                session.traceId,
+            ).collect { delivery ->
+                if (live !== session) return@collect
+                handle(session, delivery)
+            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: BridgeException) {
+            logger?.log("bridge stopped: ${error.message}")
+            if (live === session && session.connected == null) {
+                onConnectFailed(
+                    io.kton.connect.protocol.WalletMessage.ConnectFailed(
+                        id = 0,
+                        code = error.status ?: io.kton.connect.protocol.TonConnectError.UNKNOWN,
+                        message = error.message ?: "Bridge error",
+                    ),
+                )
+            }
         }
     }
 
@@ -342,8 +409,12 @@ class TonConnect(
         if (embeddedError != null) {
             emit(TonConnectEvent.RequestFailed("embedded", embeddedError.code, embeddedError.message))
         }
-        val embedded = (message.embeddedResult as? JsonPrimitive)?.contentOrNull
-        if (embedded != null) emit(TonConnectEvent.TransactionSigned(SignedTransaction(embedded, "embedded")))
+        val embeddedBoc = internalBoc(message.embeddedResult)
+        if (embeddedBoc != null && message.embeddedResult is JsonObject) {
+            emit(TonConnectEvent.MessageSigned(SignedMessage(embeddedBoc, "embedded")))
+        } else if (embeddedBoc != null) {
+            emit(TonConnectEvent.TransactionSigned(SignedTransaction(embeddedBoc, "embedded")))
+        }
     }
 
     private suspend fun onConnectFailed(message: WalletMessage.ConnectFailed) {
@@ -378,6 +449,7 @@ class TonConnect(
                 toClientId = walletClientId,
                 bodyBase64 = encrypted.toBase64(),
                 topic = method,
+                traceId = session.traceId,
             )
             persist(session)
             logger?.log("sent $method #$id")
@@ -409,7 +481,7 @@ class TonConnect(
         validUntil = transaction.validUntil ?: (currentTimeMillis() / 1000 + 300),
     )
 
-    private fun validateTransaction(transaction: Transaction, wallet: ConnectedWallet) {
+    private fun validateTransaction(transaction: Transaction, wallet: ConnectedWallet, featureName: String) {
         val hasMessages = !transaction.messages.isNullOrEmpty()
         val hasItems = !transaction.items.isNullOrEmpty()
         if (hasMessages == hasItems) {
@@ -419,15 +491,21 @@ class TonConnect(
             require(message.address.isNotBlank()) { "Message address is empty" }
             require(message.amount.all { it.isDigit() }) { "Amount must be a decimal nanocoin string" }
         }
-        val feature = wallet.features.filterIsInstance<WalletFeature.SendTransaction>().firstOrNull()
-        if (wallet.features.isNotEmpty() && feature == null) {
-            throw TonConnectException("Connected wallet does not support SendTransaction")
+        if (wallet.features.isNotEmpty() && wallet.features.none { it.name == featureName }) {
+            throw TonConnectException("Connected wallet does not support $featureName")
         }
-        val max = feature?.maxMessages
+        val max = when (featureName) {
+            "SignMessage" -> wallet.features.filterIsInstance<WalletFeature.SignMessage>().firstOrNull()?.maxMessages
+            else -> wallet.features.filterIsInstance<WalletFeature.SendTransaction>().firstOrNull()?.maxMessages
+        }
         if (max != null && (transaction.messages?.size ?: 0) > max) {
-            throw TonConnectException("Wallet accepts at most $max messages in one transaction")
+            throw TonConnectException("Wallet accepts at most $max messages in one request")
         }
-        if (feature?.extraCurrencySupported == false && transaction.messages.orEmpty().any { !it.extraCurrency.isNullOrEmpty() }) {
+        val extraCurrency = when (featureName) {
+            "SignMessage" -> wallet.features.filterIsInstance<WalletFeature.SignMessage>().firstOrNull()?.extraCurrencySupported
+            else -> wallet.features.filterIsInstance<WalletFeature.SendTransaction>().firstOrNull()?.extraCurrencySupported
+        }
+        if (extraCurrency == false && transaction.messages.orEmpty().any { !it.extraCurrency.isNullOrEmpty() }) {
             throw TonConnectException("Connected wallet does not support extra currencies")
         }
     }
@@ -451,6 +529,7 @@ class TonConnect(
                 lastWalletEventId = session.lastWalletEventId,
                 bridgeLastEventId = session.bridgeLastEventId,
                 featuresJson = ProtocolJson.encodeToString(ListSerializer(WalletFeature.serializer()), connected.features),
+                traceId = session.traceId,
             ),
         )
     }
@@ -487,6 +566,7 @@ class TonConnect(
         var nextRequestId: Long = 1,
         var lastWalletEventId: Long? = null,
         var bridgeLastEventId: String? = null,
+        var traceId: String? = null,
     ) {
         fun acceptEvent(id: Long): Boolean {
             val previous = lastWalletEventId
@@ -510,3 +590,9 @@ private data class AppRequest(
 )
 
 private fun JsonObject.string(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
+
+private fun internalBoc(result: JsonElement?): String? = when (result) {
+    is JsonObject -> result.string("internalBoc")
+    is JsonPrimitive -> result.contentOrNull
+    else -> null
+}
