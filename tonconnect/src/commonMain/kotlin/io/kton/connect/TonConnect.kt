@@ -19,6 +19,7 @@ import io.kton.connect.protocol.OutgoingMessage
 import io.kton.connect.protocol.ProtocolJson
 import io.kton.connect.protocol.SignDataPayload
 import io.kton.connect.protocol.SignDataResult
+import io.kton.connect.protocol.TonConnectError
 import io.kton.connect.protocol.Transaction
 import io.kton.connect.protocol.WalletApp
 import io.kton.connect.protocol.WalletFeature
@@ -29,6 +30,7 @@ import io.kton.connect.storage.MemorySessionStorage
 import io.kton.connect.storage.SessionStorage
 import io.kton.connect.storage.StoredSession
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -344,15 +346,15 @@ class TonConnect(
                 if (live !== session) return@collect
                 handle(session, delivery)
             }
-        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: BridgeException) {
             logger?.log("bridge stopped: ${error.message}")
             if (live === session && session.connected == null) {
                 onConnectFailed(
-                    io.kton.connect.protocol.WalletMessage.ConnectFailed(
+                    WalletMessage.ConnectFailed(
                         id = 0,
-                        code = error.status ?: io.kton.connect.protocol.TonConnectError.UNKNOWN,
+                        code = error.status ?: TonConnectError.UNKNOWN,
                         message = error.message ?: "Bridge error",
                     ),
                 )
