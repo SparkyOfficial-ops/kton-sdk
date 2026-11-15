@@ -12,3 +12,5 @@
 - feat: add AndroidTonConnect implementation (auto)
 
 - feat: add AndroidSessionStorage (auto)
+
+- feat: add QR code generation (auto)
