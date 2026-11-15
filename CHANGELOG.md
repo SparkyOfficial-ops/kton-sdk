@@ -176,3 +176,5 @@
 - refactor: unify error types into TonConnectException
 
 - refactor: make WalletState data class
+
+- fix: race condition in Bridge reconnect
