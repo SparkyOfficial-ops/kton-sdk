@@ -30,3 +30,5 @@
 - feat: add platform info (auto)
 
 - feat: implement HttpClientFactory for all targets (auto)
+
+- feat: add WalletState model (auto)
