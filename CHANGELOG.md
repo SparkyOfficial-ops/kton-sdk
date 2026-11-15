@@ -102,3 +102,5 @@
 - feat: add platform info helpers
 
 - feat: implement HttpClientFactory for all targets
+
+- feat: add WalletState model
