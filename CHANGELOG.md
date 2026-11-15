@@ -214,3 +214,5 @@
 - feat: add wallet list fetching
 
 - feat: add wallet metadata model
+
+- fix: timeout not applied to SSE connection
