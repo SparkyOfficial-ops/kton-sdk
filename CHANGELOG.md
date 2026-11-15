@@ -72,3 +72,5 @@
 - fix: handle null body in Bridge SSE response (auto)
 
 - fix: correct base64url encoding in Links (auto)
+
+- fix: AndroidSessionStorage NPE on missing prefs key (auto)
