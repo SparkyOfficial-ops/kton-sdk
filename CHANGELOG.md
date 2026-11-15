@@ -78,3 +78,5 @@
 - fix: TonProof timestamp overflow on 32-bit (auto)
 
 - fix: QrCode bitmap recycling on Android (auto)
+
+- fix: HttpClient engine selection on JVM (auto)
