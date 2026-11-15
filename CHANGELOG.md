@@ -208,3 +208,5 @@
 - refactor: split TonConnect into interface and impl
 
 - feat: add timeout configuration to Bridge
+
+- feat: add custom bridge URL support
