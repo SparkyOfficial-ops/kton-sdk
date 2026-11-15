@@ -14,3 +14,5 @@
 - feat: add AndroidSessionStorage (auto)
 
 - feat: add QR code generation (auto)
+
+- feat: add OpenWallet deep-link helper (auto)
