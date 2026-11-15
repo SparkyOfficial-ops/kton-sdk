@@ -36,3 +36,5 @@
 - feat: add Protocol message types (auto)
 
 - feat: add TonProof verification (auto)
+
+- feat: add Links builder for connect URL (auto)
