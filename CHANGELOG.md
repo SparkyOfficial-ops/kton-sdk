@@ -110,3 +110,5 @@
 - feat: add TonProof verification
 
 - feat: add Links builder for connect URL
+
+- feat: add Boc serialization helper
