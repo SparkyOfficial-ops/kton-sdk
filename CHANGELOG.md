@@ -190,3 +190,5 @@
 - test: add Bridge unit tests
 
 - test: add WalletState serialization tests
+
+- test: add Links builder tests
