@@ -100,3 +100,5 @@
 - feat: add platform Uuid abstraction
 
 - feat: add platform info helpers
+
+- feat: implement HttpClientFactory for all targets
