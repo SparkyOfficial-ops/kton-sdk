@@ -168,3 +168,5 @@
 - feat: add reconnect logic in Bridge
 
 - feat: expose wallet address from WalletState
+
+- feat: add sendTransaction API
