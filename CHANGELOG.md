@@ -24,3 +24,5 @@
 - feat: add iOS/macOS session storage stub (auto)
 
 - feat: add platform Lock abstraction (auto)
+
+- feat: add platform Uuid abstraction (auto)
