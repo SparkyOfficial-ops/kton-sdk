@@ -216,3 +216,5 @@
 - feat: add wallet metadata model
 
 - fix: timeout not applied to SSE connection
+
+- fix: wallet list parsing on empty response
