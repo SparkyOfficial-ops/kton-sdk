@@ -70,3 +70,5 @@
 - refactor: simplify SessionCrypto key derivation (auto)
 
 - fix: handle null body in Bridge SSE response (auto)
+
+- fix: correct base64url encoding in Links (auto)
