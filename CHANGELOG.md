@@ -128,3 +128,5 @@
 - refactor: simplify SessionCrypto key derivation
 
 - fix: handle null body in Bridge SSE response
+
+- fix: correct base64url encoding in Links
