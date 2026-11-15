@@ -120,3 +120,5 @@
 - test: add ProtocolTest for connect URL
 
 - refactor: extract Bytes utility functions
+
+- refactor: extract Sha256 to separate file
