@@ -60,3 +60,5 @@
 - chore: configure root build.gradle.kts (auto)
 
 - chore: configure tonconnect module build.gradle.kts (auto)
+
+- refactor: extract Bytes utility functions (auto)
