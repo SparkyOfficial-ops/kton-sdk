@@ -104,3 +104,5 @@
 - feat: implement HttpClientFactory for all targets
 
 - feat: add WalletState model
+
+- feat: add Protocol message types
