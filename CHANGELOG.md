@@ -178,3 +178,5 @@
 - refactor: make WalletState data class
 
 - fix: race condition in Bridge reconnect
+
+- fix: memory leak in AndroidSessionStorage
