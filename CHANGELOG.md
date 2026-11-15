@@ -158,3 +158,5 @@
 - chore: bump ktor to 3.1.3
 
 - chore: bump kotlinx-serialization to 1.8.1
+
+- chore: bump kotlinx-coroutines to 1.10.2
