@@ -148,3 +148,5 @@
 - style: add file headers
 
 - docs: document TonConnect public API
+
+- docs: add protocol overview to README
