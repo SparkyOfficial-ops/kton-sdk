@@ -194,3 +194,5 @@
 - test: add Links builder tests
 
 - test: add TonProof edge case tests
+
+- ci: fix sdkmanager license acceptance
