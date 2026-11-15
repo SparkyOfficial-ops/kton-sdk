@@ -162,3 +162,5 @@
 - chore: bump kotlinx-coroutines to 1.10.2
 
 - chore: add dependabot config
+
+- feat: add disconnect support to TonConnect
