@@ -172,3 +172,5 @@
 - feat: add sendTransaction API
 
 - feat: add signData API stub
+
+- refactor: unify error types into TonConnectException
