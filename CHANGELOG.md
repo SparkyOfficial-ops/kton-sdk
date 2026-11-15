@@ -28,3 +28,5 @@
 - feat: add platform Uuid abstraction (auto)
 
 - feat: add platform info (auto)
+
+- feat: implement HttpClientFactory for all targets (auto)
