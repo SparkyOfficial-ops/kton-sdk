@@ -202,3 +202,5 @@
 - ci: add caching for Gradle build
 
 - docs: update README with Android setup
+
+- docs: add changelog v0.1.0
