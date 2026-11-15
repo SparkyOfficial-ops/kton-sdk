@@ -164,3 +164,5 @@
 - chore: add dependabot config
 
 - feat: add disconnect support to TonConnect
+
+- feat: add reconnect logic in Bridge
