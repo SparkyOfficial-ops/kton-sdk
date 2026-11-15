@@ -58,3 +58,5 @@
 - chore: add gradle.properties (auto)
 
 - chore: configure root build.gradle.kts (auto)
+
+- chore: configure tonconnect module build.gradle.kts (auto)
