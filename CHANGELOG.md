@@ -154,3 +154,5 @@
 - docs: add QR code usage example
 
 - docs: add TonProof verification guide
+
+- chore: bump ktor to 3.1.3
