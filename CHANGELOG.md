@@ -68,3 +68,5 @@
 - refactor: clean up Bridge error handling (auto)
 
 - refactor: simplify SessionCrypto key derivation (auto)
+
+- fix: handle null body in Bridge SSE response (auto)
