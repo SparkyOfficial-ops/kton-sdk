@@ -144,3 +144,5 @@
 - perf: reuse HttpClient instance across requests
 
 - style: apply ktlint formatting
+
+- style: add file headers
