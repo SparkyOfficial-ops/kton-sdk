@@ -218,3 +218,5 @@
 - fix: timeout not applied to SSE connection
 
 - fix: wallet list parsing on empty response
+
+- perf: lazy-init crypto session
