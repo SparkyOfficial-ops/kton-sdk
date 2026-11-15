@@ -200,3 +200,5 @@
 - ci: pin Java to temurin 21
 
 - ci: add caching for Gradle build
+
+- docs: update README with Android setup
