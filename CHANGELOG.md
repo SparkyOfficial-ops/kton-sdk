@@ -38,3 +38,5 @@
 - feat: add TonProof verification (auto)
 
 - feat: add Links builder for connect URL (auto)
+
+- feat: add Boc serialization helper (auto)
