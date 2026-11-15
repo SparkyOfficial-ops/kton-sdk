@@ -96,3 +96,5 @@
 - feat: add iOS platform stub
 
 - feat: add platform Lock abstraction
+
+- feat: add platform Uuid abstraction
