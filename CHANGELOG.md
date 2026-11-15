@@ -188,3 +188,5 @@
 - fix: handle wallet rejection response
 
 - test: add Bridge unit tests
+
+- test: add WalletState serialization tests
