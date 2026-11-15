@@ -186,3 +186,5 @@
 - fix: protocol version negotiation
 
 - fix: handle wallet rejection response
+
+- test: add Bridge unit tests
