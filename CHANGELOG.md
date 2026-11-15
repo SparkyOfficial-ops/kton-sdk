@@ -130,3 +130,5 @@
 - fix: handle null body in Bridge SSE response
 
 - fix: correct base64url encoding in Links
+
+- fix: AndroidSessionStorage NPE on missing prefs key
