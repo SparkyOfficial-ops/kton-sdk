@@ -146,3 +146,5 @@
 - style: apply ktlint formatting
 
 - style: add file headers
+
+- docs: document TonConnect public API
