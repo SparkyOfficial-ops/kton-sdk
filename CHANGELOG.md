@@ -224,3 +224,5 @@
 - docs: add contribution guide
 
 - chore: update Gradle to 8.14
+
+- feat: add ProGuard rules for release builds
