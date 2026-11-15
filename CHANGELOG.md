@@ -222,3 +222,5 @@
 - perf: lazy-init crypto session
 
 - docs: add contribution guide
+
+- chore: update Gradle to 8.14
