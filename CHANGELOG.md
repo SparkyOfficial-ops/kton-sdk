@@ -180,3 +180,5 @@
 - fix: race condition in Bridge reconnect
 
 - fix: memory leak in AndroidSessionStorage
+
+- fix: incorrect nonce increment in TweetNaCl
