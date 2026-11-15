@@ -62,3 +62,5 @@
 - chore: configure tonconnect module build.gradle.kts (auto)
 
 - refactor: extract Bytes utility functions (auto)
+
+- refactor: extract Sha256 to separate file (auto)
