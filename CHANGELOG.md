@@ -34,3 +34,5 @@
 - feat: add WalletState model (auto)
 
 - feat: add Protocol message types (auto)
+
+- feat: add TonProof verification (auto)
