@@ -206,3 +206,5 @@
 - docs: add changelog v0.1.0
 
 - refactor: split TonConnect into interface and impl
+
+- feat: add timeout configuration to Bridge
