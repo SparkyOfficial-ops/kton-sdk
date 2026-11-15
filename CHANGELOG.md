@@ -118,3 +118,5 @@
 - test: add CryptoTest for TweetNaCl
 
 - test: add ProtocolTest for connect URL
+
+- refactor: extract Bytes utility functions
