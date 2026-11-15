@@ -8,3 +8,5 @@
 - feat: implement SessionCrypto with TweetNaCl (auto)
 
 - feat: add Bridge SSE transport (auto)
+
+- feat: add AndroidTonConnect implementation (auto)
