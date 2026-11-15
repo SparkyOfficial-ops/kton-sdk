@@ -106,3 +106,5 @@
 - feat: add WalletState model
 
 - feat: add Protocol message types
+
+- feat: add TonProof verification
