@@ -46,3 +46,5 @@
 - test: add CryptoTest for TweetNaCl (auto)
 
 - test: add ProtocolTest for connect URL (auto)
+
+- ci: add GitHub Actions workflow (auto)
