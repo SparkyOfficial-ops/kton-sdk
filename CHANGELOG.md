@@ -26,3 +26,5 @@
 - feat: add platform Lock abstraction (auto)
 
 - feat: add platform Uuid abstraction (auto)
+
+- feat: add platform info (auto)
