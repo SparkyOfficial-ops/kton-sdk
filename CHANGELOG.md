@@ -56,3 +56,5 @@
 - chore: configure Gradle wrapper (auto)
 
 - chore: add gradle.properties (auto)
+
+- chore: configure root build.gradle.kts (auto)
