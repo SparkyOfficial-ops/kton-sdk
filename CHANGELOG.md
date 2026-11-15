@@ -80,3 +80,5 @@
 - fix: QrCode bitmap recycling on Android (auto)
 
 - fix: HttpClient engine selection on JVM (auto)
+
+- perf: cache parsed WalletState in memory (auto)
