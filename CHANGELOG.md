@@ -212,3 +212,5 @@
 - feat: add custom bridge URL support
 
 - feat: add wallet list fetching
+
+- feat: add wallet metadata model
