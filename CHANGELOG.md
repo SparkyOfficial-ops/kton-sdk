@@ -184,3 +184,5 @@
 - fix: incorrect nonce increment in TweetNaCl
 
 - fix: protocol version negotiation
+
+- fix: handle wallet rejection response
