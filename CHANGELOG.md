@@ -22,3 +22,5 @@
 - feat: add JVM session storage (auto)
 
 - feat: add iOS/macOS session storage stub (auto)
+
+- feat: add platform Lock abstraction (auto)
