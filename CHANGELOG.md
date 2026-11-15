@@ -76,3 +76,5 @@
 - fix: AndroidSessionStorage NPE on missing prefs key (auto)
 
 - fix: TonProof timestamp overflow on 32-bit (auto)
+
+- fix: QrCode bitmap recycling on Android (auto)
