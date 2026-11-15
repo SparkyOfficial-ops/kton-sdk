@@ -196,3 +196,5 @@
 - test: add TonProof edge case tests
 
 - ci: fix sdkmanager license acceptance
+
+- ci: pin Java to temurin 21
