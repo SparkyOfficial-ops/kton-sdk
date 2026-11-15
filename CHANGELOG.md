@@ -156,3 +156,5 @@
 - docs: add TonProof verification guide
 
 - chore: bump ktor to 3.1.3
+
+- chore: bump kotlinx-serialization to 1.8.1
