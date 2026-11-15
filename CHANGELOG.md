@@ -112,3 +112,5 @@
 - feat: add Links builder for connect URL
 
 - feat: add Boc serialization helper
+
+- feat: implement QrCode common expect
