@@ -90,3 +90,5 @@
 - feat: add OpenWallet deep-link helper
 
 - feat: add JVM and Android shared crypto base
+
+- feat: add JVM session storage
