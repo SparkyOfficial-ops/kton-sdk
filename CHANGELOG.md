@@ -166,3 +166,5 @@
 - feat: add disconnect support to TonConnect
 
 - feat: add reconnect logic in Bridge
+
+- feat: expose wallet address from WalletState
