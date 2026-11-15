@@ -150,3 +150,5 @@
 - docs: document TonConnect public API
 
 - docs: add protocol overview to README
+
+- docs: add QR code usage example
