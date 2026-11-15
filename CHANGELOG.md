@@ -174,3 +174,5 @@
 - feat: add signData API stub
 
 - refactor: unify error types into TonConnectException
+
+- refactor: make WalletState data class
