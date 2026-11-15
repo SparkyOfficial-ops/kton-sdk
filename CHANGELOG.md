@@ -92,3 +92,5 @@
 - feat: add JVM and Android shared crypto base
 
 - feat: add JVM session storage
+
+- feat: add iOS platform stub
