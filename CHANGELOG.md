@@ -82,3 +82,5 @@
 - fix: HttpClient engine selection on JVM (auto)
 
 - perf: cache parsed WalletState in memory (auto)
+
+- perf: reuse HttpClient instance across requests (auto)
