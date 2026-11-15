@@ -50,3 +50,5 @@
 - ci: add GitHub Actions workflow (auto)
 
 - docs: add README (auto)
+
+- chore: add .gitignore and .gitattributes (auto)
