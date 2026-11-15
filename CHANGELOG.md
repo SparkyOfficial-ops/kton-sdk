@@ -220,3 +220,5 @@
 - fix: wallet list parsing on empty response
 
 - perf: lazy-init crypto session
+
+- docs: add contribution guide
