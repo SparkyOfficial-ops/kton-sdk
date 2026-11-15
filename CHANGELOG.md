@@ -182,3 +182,5 @@
 - fix: memory leak in AndroidSessionStorage
 
 - fix: incorrect nonce increment in TweetNaCl
+
+- fix: protocol version negotiation
