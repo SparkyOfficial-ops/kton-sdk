@@ -142,3 +142,5 @@
 - perf: cache parsed WalletState in memory
 
 - perf: reuse HttpClient instance across requests
+
+- style: apply ktlint formatting
