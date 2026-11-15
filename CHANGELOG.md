@@ -10,3 +10,5 @@
 - feat: add Bridge SSE transport (auto)
 
 - feat: add AndroidTonConnect implementation (auto)
+
+- feat: add AndroidSessionStorage (auto)
