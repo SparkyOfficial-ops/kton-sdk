@@ -44,3 +44,5 @@
 - feat: implement QrCode common expect (auto)
 
 - test: add CryptoTest for TweetNaCl (auto)
+
+- test: add ProtocolTest for connect URL (auto)
