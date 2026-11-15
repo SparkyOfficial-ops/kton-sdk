@@ -198,3 +198,5 @@
 - ci: fix sdkmanager license acceptance
 
 - ci: pin Java to temurin 21
+
+- ci: add caching for Gradle build
