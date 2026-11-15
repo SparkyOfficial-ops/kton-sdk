@@ -54,3 +54,5 @@
 - chore: add .gitignore and .gitattributes (auto)
 
 - chore: configure Gradle wrapper (auto)
+
+- chore: add gradle.properties (auto)
