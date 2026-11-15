@@ -114,3 +114,5 @@
 - feat: add Boc serialization helper
 
 - feat: implement QrCode common expect
+
+- test: add CryptoTest for TweetNaCl
