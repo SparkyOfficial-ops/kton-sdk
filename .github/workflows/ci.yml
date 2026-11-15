@@ -31,9 +31,11 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
 
       - name: Install Android 36
-        run: sdkmanager --install "platforms;android-36" "build-tools;36.1.0"
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Test
         run: ./gradlew :tonconnect:jvmTest :tonconnect:testDebugUnitTest --stacktrace
