@@ -86,3 +86,5 @@
 - perf: reuse HttpClient instance across requests (auto)
 
 - style: apply ktlint formatting (auto)
+
+- feat: add OpenWallet deep-link helper
