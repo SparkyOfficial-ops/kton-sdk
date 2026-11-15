@@ -32,3 +32,5 @@
 - feat: implement HttpClientFactory for all targets (auto)
 
 - feat: add WalletState model (auto)
+
+- feat: add Protocol message types (auto)
