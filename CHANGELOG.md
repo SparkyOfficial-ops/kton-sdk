@@ -94,3 +94,5 @@
 - feat: add JVM session storage
 
 - feat: add iOS platform stub
+
+- feat: add platform Lock abstraction
