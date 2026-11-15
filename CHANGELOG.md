@@ -64,3 +64,5 @@
 - refactor: extract Bytes utility functions (auto)
 
 - refactor: extract Sha256 to separate file (auto)
+
+- refactor: clean up Bridge error handling (auto)
