@@ -152,3 +152,5 @@
 - docs: add protocol overview to README
 
 - docs: add QR code usage example
+
+- docs: add TonProof verification guide
