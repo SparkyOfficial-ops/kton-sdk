@@ -16,3 +16,5 @@
 - feat: add QR code generation (auto)
 
 - feat: add OpenWallet deep-link helper (auto)
+
+- feat: add JVM and Android shared crypto base (auto)
