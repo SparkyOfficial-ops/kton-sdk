@@ -160,3 +160,5 @@
 - chore: bump kotlinx-serialization to 1.8.1
 
 - chore: bump kotlinx-coroutines to 1.10.2
+
+- chore: add dependabot config
