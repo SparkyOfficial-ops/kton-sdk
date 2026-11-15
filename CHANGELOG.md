@@ -210,3 +210,5 @@
 - feat: add timeout configuration to Bridge
 
 - feat: add custom bridge URL support
+
+- feat: add wallet list fetching
