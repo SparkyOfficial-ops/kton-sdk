@@ -192,3 +192,5 @@
 - test: add WalletState serialization tests
 
 - test: add Links builder tests
+
+- test: add TonProof edge case tests
